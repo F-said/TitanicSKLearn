@@ -3,6 +3,19 @@ from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import pandas as pd
 
+
+def most_frequent_string(Series):
+    features = {}
+    for element in Series:
+        if element is not np.nan or "n" or "nan":
+            if element not in features:
+                features[str(element)] = 0
+                features[str(element)] += 1
+            else:
+                features[str(element)] += 1
+    max_value = max(features.values())
+    return [k for k, v in features.items() if v == max_value]
+
 ''' Pre-process phase '''
 # Load data
 train_data = pd.read_csv("train.csv")
@@ -35,32 +48,12 @@ X_train["Age"] = X_train["Age"].astype(str).apply(lambda x: x[:4])
 X_train["Cabin"] = X_train["Cabin"].str.replace("\d+", '')
 X_train["Cabin"] = X_train["Cabin"].astype(str).apply(lambda x: x[:1])
 
-### MAKE THIS A FUNCTION ###
 # Sklearn imputer doesn't allow for string data (and for good reason), so I'll have to find most frequent cabin myself
-titanic_cabin_levels_train = {}
-for cabin in X_train["Cabin"]:
-    if cabin is not 'n':
-        if cabin not in titanic_cabin_levels_train:
-            titanic_cabin_levels_train[str(cabin)] = 0
-            titanic_cabin_levels_train[str(cabin)] += 1
-        else:
-            titanic_cabin_levels_train[str(cabin)] += 1
-max_value = max(titanic_cabin_levels_train.values())
-most_freq_cabin = [k for k, v in titanic_cabin_levels_train.items() if v == max_value]
+most_freq_cabin = most_frequent_string(X_train["Cabin"])
 X_train["Cabin"] = X_train["Cabin"].str.replace("n", most_freq_cabin[0])
 
-### MAKE THIS A FUNCTION ###
 # Same method for embarked feature as for cabin data, as embarked feature is also a string
-titanic_embark_train = {}
-for e in X_train["Embarked"]:
-    if e is not np.nan:
-        if e not in titanic_embark_train:
-            titanic_embark_train[str(e)] = 0
-            titanic_embark_train[str(e)] += 1
-        else:
-            titanic_embark_train[str(e)] += 1
-max_value = max(titanic_embark_train.values())
-most_freq_embark = [k for k, v in titanic_embark_train.items() if v == max_value]
+most_freq_embark = most_frequent_string(X_train["Embarked"])
 X_train["Embarked"] = X_train["Embarked"].replace(np.nan, most_freq_embark[0])
 
 # Reveal if any features still have missing values
@@ -84,28 +77,10 @@ X_test["Fare"] = imr.transform(X_test[["Fare"]])
 X_test["Cabin"] = X_test["Cabin"].str.replace("\d+", '')
 X_test["Cabin"] = X_test["Cabin"].astype(str).apply(lambda x: x[:1])
 
-titanic_cabin_levels_test = {}
-for cabin in X_test["Cabin"]:
-    if cabin is not 'n':
-        if cabin not in titanic_cabin_levels_test:
-            titanic_cabin_levels_test[str(cabin)] = 0
-            titanic_cabin_levels_test[str(cabin)] += 1
-        else:
-            titanic_cabin_levels_test[str(cabin)] += 1
-max_value = max(titanic_cabin_levels_test.values())
-most_freq_cabin = [k for k, v in titanic_cabin_levels_test.items() if v == max_value]
+most_freq_cabin = most_frequent_string(X_test["Cabin"])
 X_test["Cabin"] = X_test["Cabin"].str.replace("n", most_freq_cabin[0])
 
-titanic_embark_test = {}
-for e in X_test["Embarked"]:
-    if e is not np.nan:
-        if e not in titanic_embark_test:
-            titanic_embark_test[str(e)] = 0
-            titanic_embark_test[str(e)] += 1
-        else:
-            titanic_embark_test[str(e)] += 1
-max_value = max(titanic_embark_test.values())
-most_freq_embark = [k for k, v in titanic_embark_test.items() if v == max_value]
+most_freq_embark = most_frequent_string(X_test["Embarked"])
 X_test["Embarked"] = X_test["Embarked"].replace(np.nan, most_freq_embark[0])
 
 X_test = pd.get_dummies(X_test, columns=["Sex"])
@@ -116,7 +91,7 @@ X_test = pd.get_dummies(X_test, columns=["Embarked"])
 X_test.insert(loc=14, column="Cabin_T", value=0)
 
 ''' Algorithm phase '''
-forest = RandomForestClassifier(criterion="entropy", n_estimators=1, n_jobs=2)
+forest = RandomForestClassifier(criterion="entropy", n_estimators=100, n_jobs=2, max_depth=5)
 forest.fit(X_train, y_train)
 
 ''' Predict phase '''
