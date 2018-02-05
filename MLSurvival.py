@@ -7,7 +7,7 @@ import pandas as pd
 def most_frequent_string(Series):
     features = {}
     for element in Series:
-        if element is not np.nan or "n" or "nan":
+        if element is not np.nan and element is not "n" and element is not "nan":
             if element not in features:
                 features[str(element)] = 0
                 features[str(element)] += 1
@@ -91,7 +91,7 @@ X_test = pd.get_dummies(X_test, columns=["Embarked"])
 X_test.insert(loc=14, column="Cabin_T", value=0)
 
 ''' Algorithm phase '''
-forest = RandomForestClassifier(criterion="entropy", n_estimators=100, n_jobs=2, max_depth=5)
+forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
 forest.fit(X_train, y_train)
 
 ''' Predict phase '''
