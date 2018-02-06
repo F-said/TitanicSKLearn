@@ -115,7 +115,7 @@ feature_importance(X_train, y_train)
 # Only process features that are in top 5 relative importance
 forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
 
-selection = SelectFromModel(estimator=forest)
+selection = SelectFromModel(estimator=forest, threshold=0.05)
 selection.fit(X_train, y_train)
 X_selected = selection.transform(X_train)
 
