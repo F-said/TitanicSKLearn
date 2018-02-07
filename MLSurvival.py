@@ -7,6 +7,38 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 
+def find_best_params(X, y, X_c, y_c):
+    estimator_list = np.arange(50, 1000, 100)
+    depth_list = np.arange(1, 11, 1)
+    accuracy_list = []
+
+    best_estimator = estimator_list[0]
+    best_depth = depth_list[0]
+    best_accuracy = 0
+
+    for e in estimator_list:
+        for d in depth_list:
+            best_forest = RandomForestClassifier(criterion="entropy", n_estimators=e, n_jobs=2, max_depth=d,
+                                                 oob_score=True)
+            best_selection = SelectFromModel(estimator=best_forest, threshold=0.06)
+            best_selection.fit(X, y)
+            X = best_selection.transform(X)
+
+            best_forest.fit(X, y)
+
+            X_c = best_selection.transform(X_c)
+            y_c_predict = best_forest.predict(X_c)
+
+            accuracy = accuracy_score(y_true=y_c, y_pred=y_c_predict)
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_estimator = e
+                best_depth = d
+
+            accuracy_list.append(accuracy_score(y_true=y_c, y_pred=y_c_predict))
+    return best_estimator, best_depth
+
+
 def feature_importance(X, y):
     forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
     forest.fit(X, y)
@@ -107,17 +139,24 @@ X_test = pd.get_dummies(X_test, columns=["Embarked"])
 feature_importance(X_train, y_train)
 
 # Create cross validation test set
-X_train, y_train, X_cv, y_cv = train_test_split(X_train, y_train, test_size=0.25)
+X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.25)
 
 ''' Algorithm phase '''
+# Find best parameters through this computationally expensive monster that I plan on only using once before commenting
+# out
+# best_e, best_d = find_best_params(X_train_split, y_train_split, X_cv, y_cv)
+# print("Best Estimator: ", best_e)
+# print("Best depth: ", best_d)
+# Best n = 150, best depth = 9
+
 # Only process features that are in top 5 relative importance
-forest = RandomForestClassifier(criterion="entropy", n_estimators=100, n_jobs=2, max_depth=5, oob_score=True)
+forest = RandomForestClassifier(criterion="entropy", n_estimators=150, n_jobs=2, max_depth=9, oob_score=True)
 
-selection = SelectFromModel(estimator=forest, threshold=0.04)
-selection.fit(X_train, y_train)
-X_selected = selection.transform(X_train)
+selection = SelectFromModel(estimator=forest, threshold=0.1)
+selection.fit(X_train_split, y_train_split)
+X_train_selected = selection.transform(X_train_split)
 
-forest.fit(X_selected, y_train)
+forest.fit(X_train_selected, y_train_split)
 
 ''' Cross-validation phase '''
 X_cv_selected = selection.transform(X_cv)
@@ -131,5 +170,4 @@ y_predict = pd.Series(forest.predict(X_selected_test), index=subfile.index)
 
 subfile["Survived"] = y_predict
 subfile.to_csv("submission")
-
 
