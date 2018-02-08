@@ -136,7 +136,7 @@ X_train["Embarked"] = X_train["Embarked"].replace(np.nan, most_freq_embark[0])
 print("Features that have missing values: ")
 print(X_train.isnull().sum())
 
-# Encode nominal data in X_train (sex, embarked) using ONE HOT ENCODER
+# Encode nominal data in X_train (sex, embarked) using one hot encoder
 X_train = pd.get_dummies(X_train, columns=["Sex"])
 X_train = pd.get_dummies(X_train, columns=["Embarked"])
 
@@ -182,13 +182,12 @@ feature_importance(X_train, y_train)
 # print("Best depth: ", best_d)
 # Best n = 50, best depth = 5
 
-# Only process features that are in top 5 relative importance
 forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
 
 # Reveal best threshold of features
 # t = find_best_thresh(X_train_split, y_train_split, X_cv, y_cv, 50, 5)
 # print("Best thresh: ", t)
-# Best threshold was found to be 0
+# Best threshold was found to be either 0 or 0.1
 
 selection = SelectFromModel(estimator=forest, threshold=0.1)
 selection.fit(X_train, y_train)
