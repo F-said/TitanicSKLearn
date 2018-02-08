@@ -5,10 +5,41 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 
 
-def find_best_params(X, y, X_c, y_c):
-    estimator_list = np.arange(50, 1000, 100)
+def find_best_thresh(X, y, X_c, y_c, estimators, depth):
+    thresh_list = np.arange(0, 1, 0.05)
+    accuracy_list = []
+    best_accuracy = 0
+    best_t = thresh_list[0]
+    thresh_forest = RandomForestClassifier(criterion="entropy", n_estimators=estimators, n_jobs=2, max_depth=depth,
+                                           oob_score=True)
+    for th in thresh_list:
+        thresh_selection = SelectFromModel(estimator=thresh_forest, threshold=th)
+        thresh_selection.fit(X, y)
+        X = thresh_selection.transform(X)
+
+        thresh_forest.fit(X, y)
+
+        X_c = thresh_selection.transform(X_c)
+        y_c_predict = thresh_forest.predict(X_c)
+
+        accuracy = accuracy_score(y_true=y_c, y_pred=y_c_predict)
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_t = th
+
+        accuracy_list.append(accuracy_score(y_true=y_c, y_pred=y_c_predict))
+    plt.scatter(thresh_list, accuracy_list)
+    plt.xlabel("Threshold")
+    plt.ylabel("Accuracy")
+    plt.show()
+    return best_t
+
+
+def find_best_params(X, y, X_c, y_c, t):
+    estimator_list = np.arange(50, 500, 50)
     depth_list = np.arange(1, 11, 1)
     accuracy_list = []
 
@@ -20,7 +51,7 @@ def find_best_params(X, y, X_c, y_c):
         for d in depth_list:
             best_forest = RandomForestClassifier(criterion="entropy", n_estimators=e, n_jobs=2, max_depth=d,
                                                  oob_score=True)
-            best_selection = SelectFromModel(estimator=best_forest, threshold=0.06)
+            best_selection = SelectFromModel(estimator=best_forest, threshold=t)
             best_selection.fit(X, y)
             X = best_selection.transform(X)
 
@@ -93,7 +124,7 @@ X_train["Age"] = X_train["Age"].astype(str).apply(lambda x: x[:4])
 X_train["Cabin"] = X_train["Cabin"].str.replace("\d+", '')
 X_train["Cabin"] = X_train["Cabin"].astype(str).apply(lambda x: x[:1])
 
-# Sklearn imputer doesn't allow for string data (and for good reason), so I'll have to find most frequent cabin myself
+# Sklearn imputer doesn't allow for string data, so I'll have to find most frequent cabin myself
 most_freq_cabin = most_frequent_string(X_train["Cabin"])
 X_train["Cabin"] = X_train["Cabin"].str.replace("n", most_freq_cabin[0])
 
@@ -105,13 +136,13 @@ X_train["Embarked"] = X_train["Embarked"].replace(np.nan, most_freq_embark[0])
 print("Features that have missing values: ")
 print(X_train.isnull().sum())
 
-# Encode nominal data in X_train (sex, cabin, embarked) using ONE HOT ENCODER
+# Encode nominal data in X_train (sex, embarked) using ONE HOT ENCODER
 X_train = pd.get_dummies(X_train, columns=["Sex"])
-X_train = pd.get_dummies(X_train, columns=["Cabin"])
 X_train = pd.get_dummies(X_train, columns=["Embarked"])
 
-# Drop Cabin_T class since it's only one person
-X_train = X_train.drop(labels="Cabin_T", axis=1)
+# Encode cabin as ordinal data
+size_mapping = {'A': 7, 'B': 6, 'C': 5, 'D': 4, 'E': 3, 'F': 2, 'G': 1, 'T': 1}
+X_train["Cabin"] = X_train["Cabin"].map(size_mapping)
 
 ### And now we do the same thing for our test data ###
 imr.fit(X_test[["Age"]])
@@ -132,37 +163,44 @@ most_freq_embark = most_frequent_string(X_test["Embarked"])
 X_test["Embarked"] = X_test["Embarked"].replace(np.nan, most_freq_embark[0])
 
 X_test = pd.get_dummies(X_test, columns=["Sex"])
-X_test = pd.get_dummies(X_test, columns=["Cabin"])
 X_test = pd.get_dummies(X_test, columns=["Embarked"])
+
+X_test["Cabin"] = X_test["Cabin"].map(size_mapping)
 
 # Reveal order of feature importance
 feature_importance(X_train, y_train)
 
 # Create cross validation test set
-X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.25)
+# Now that I've learned all I could from cv, remove it to give train more data
+# X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.25)
 
 ''' Algorithm phase '''
 # Find best parameters through this computationally expensive monster that I plan on only using once before commenting
 # out
-# best_e, best_d = find_best_params(X_train_split, y_train_split, X_cv, y_cv)
+# best_e, best_d = find_best_params(X_train_split, y_train_split, X_cv, y_cv, t)
 # print("Best Estimator: ", best_e)
 # print("Best depth: ", best_d)
-# Best n = 150, best depth = 9
+# Best n = 50, best depth = 5
 
 # Only process features that are in top 5 relative importance
-forest = RandomForestClassifier(criterion="entropy", n_estimators=150, n_jobs=2, max_depth=9, oob_score=True)
+forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
+
+# Reveal best threshold of features
+# t = find_best_thresh(X_train_split, y_train_split, X_cv, y_cv, 50, 5)
+# print("Best thresh: ", t)
+# Best threshold was found to be 0
 
 selection = SelectFromModel(estimator=forest, threshold=0.1)
-selection.fit(X_train_split, y_train_split)
-X_train_selected = selection.transform(X_train_split)
+selection.fit(X_train, y_train)
+X_train_selected = selection.transform(X_train)
 
-forest.fit(X_train_selected, y_train_split)
+forest.fit(X_train_selected, y_train)
 
 ''' Cross-validation phase '''
-X_cv_selected = selection.transform(X_cv)
-y_cv_predict = forest.predict(X_cv_selected)
+# X_cv_selected = selection.transform(X_cv)
+# y_cv_predict = forest.predict(X_cv_selected)
 
-print("Accuracy score: ", accuracy_score(y_true=y_cv, y_pred=y_cv_predict))
+# print("Accuracy score: ", accuracy_score(y_true=y_cv, y_pred=y_cv_predict))
 
 ''' Predict phase '''
 X_selected_test = selection.transform(X_test)
