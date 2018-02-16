@@ -93,7 +93,7 @@ def most_frequent_string(Series):
     max_value = max(features.values())
     return [k for k, v in features.items() if v == max_value]
 
-''' Pre-process phase '''
+''' Pre-process '''
 # Load data
 train_data = pd.read_csv("train.csv")
 test_data = pd.read_csv("test.csv")
@@ -169,7 +169,7 @@ X_test["Cabin"] = X_test["Cabin"].map(size_mapping)
 # Comment out to give train set more data.
 # X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.2)
 
-''' Algorithm phase '''
+''' Algorithm '''
 # Find best parameters through this computationally expensive monster that I plan on only using once before commenting
 # out
 # best_e, best_d = find_best_params(X_train_split, y_train_split, X_cv, y_cv, t)
@@ -194,13 +194,13 @@ X_train_selected = selection.transform(X_train)
 
 forest.fit(X_train_selected, y_train)
 
-''' Cross-validation phase '''
+''' Cross-validation '''
 # X_cv_selected = selection.transform(X_cv)
 # y_cv_predict = forest.predict(X_cv_selected)
 
 # print("Accuracy score: ", accuracy_score(y_true=y_cv, y_pred=y_cv_predict))
 
-''' Predict phase '''
+''' Predict '''
 X_selected_test = selection.transform(X_test)
 y_predict = pd.Series(forest.predict(X_selected_test), index=subfile.index)
 
