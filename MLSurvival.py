@@ -8,22 +8,21 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 
 
-def find_best_thresh(X, y, X_c, y_c, estimators, depth):
+def find_best_thresh(X, y, X_c, y_c, classifier):
     thresh_list = np.arange(0, 1, 0.05)
     accuracy_list = []
     best_accuracy = 0
     best_t = thresh_list[0]
-    thresh_forest = RandomForestClassifier(criterion="entropy", n_estimators=estimators, n_jobs=2, max_depth=depth,
-                                           oob_score=True)
+
     for th in thresh_list:
-        thresh_selection = SelectFromModel(estimator=thresh_forest, threshold=th)
+        thresh_selection = SelectFromModel(estimator=classifier, threshold=th)
         thresh_selection.fit(X, y)
         X = thresh_selection.transform(X)
 
-        thresh_forest.fit(X, y)
+        classifier.fit(X, y)
 
         X_c = thresh_selection.transform(X_c)
-        y_c_predict = thresh_forest.predict(X_c)
+        y_c_predict = classifier.predict(X_c)
 
         accuracy = accuracy_score(y_true=y_c, y_pred=y_c_predict)
         if accuracy > best_accuracy:
@@ -50,7 +49,7 @@ def find_best_params(X, y, X_c, y_c, t):
     for e in estimator_list:
         for d in depth_list:
             best_forest = RandomForestClassifier(criterion="entropy", n_estimators=e, n_jobs=2, max_depth=d,
-                                                 oob_score=True)
+                                                 oob_score=True, max_features="auto")
             best_selection = SelectFromModel(estimator=best_forest, threshold=t)
             best_selection.fit(X, y)
             X = best_selection.transform(X)
@@ -70,9 +69,8 @@ def find_best_params(X, y, X_c, y_c, t):
     return best_estimator, best_depth
 
 
-def feature_importance(X, y):
-    forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
-    forest.fit(X, y)
+def feature_importance(X, y, classifier):
+    classifier.fit(X, y)
 
     # Assess feature importance
     importances = forest.feature_importances_
@@ -167,12 +165,9 @@ X_test = pd.get_dummies(X_test, columns=["Embarked"])
 
 X_test["Cabin"] = X_test["Cabin"].map(size_mapping)
 
-# Reveal order of feature importance
-feature_importance(X_train, y_train)
-
 # Create cross validation test set
-# Now that I've learned all I could from cv, remove it to give train more data
-# X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.25)
+# Comment out to give train set more data.
+# X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.2)
 
 ''' Algorithm phase '''
 # Find best parameters through this computationally expensive monster that I plan on only using once before commenting
@@ -180,16 +175,20 @@ feature_importance(X_train, y_train)
 # best_e, best_d = find_best_params(X_train_split, y_train_split, X_cv, y_cv, t)
 # print("Best Estimator: ", best_e)
 # print("Best depth: ", best_d)
-# Best n = 50, best depth = 5
+# Best n = 150, best depth = 5
 
-forest = RandomForestClassifier(criterion="entropy", n_estimators=50, n_jobs=2, max_depth=5, oob_score=True)
+forest = RandomForestClassifier(criterion="entropy", n_estimators=150, n_jobs=2, max_depth=5, oob_score=True,
+                                max_features="auto")
+
+# Reveal order of feature importance
+feature_importance(X_train, y_train, forest)
 
 # Reveal best threshold of features
-# t = find_best_thresh(X_train_split, y_train_split, X_cv, y_cv, 50, 5)
+# t = find_best_thresh(X_train_split, y_train_split, X_cv, y_cv, forest)
 # print("Best thresh: ", t)
-# Best threshold was found to be either 0 or 0.1
+# Best threshold was found to be either 0 or 0.05
 
-selection = SelectFromModel(estimator=forest, threshold=0.1)
+selection = SelectFromModel(estimator=forest, threshold=0)
 selection.fit(X_train, y_train)
 X_train_selected = selection.transform(X_train)
 
