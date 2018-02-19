@@ -134,13 +134,13 @@ X_train["Embarked"] = X_train["Embarked"].replace(np.nan, most_freq_embark[0])
 print("Features that have missing values: ")
 print(X_train.isnull().sum())
 
-# Encode nominal data in X_train (sex, embarked) using one hot encoder
+# Encode nominal data in X_train (sex, embarked, and cabin) using one hot encoder
 X_train = pd.get_dummies(X_train, columns=["Sex"])
 X_train = pd.get_dummies(X_train, columns=["Embarked"])
+X_train = pd.get_dummies(X_train, columns=["Cabin"])
 
-# Encode cabin as ordinal data
-size_mapping = {'A': 7, 'B': 6, 'C': 5, 'D': 4, 'E': 3, 'F': 2, 'G': 1, 'T': 1}
-X_train["Cabin"] = X_train["Cabin"].map(size_mapping)
+# Drop Cabin_T
+X_train = X_train.drop(labels=["Cabin_T"], axis=1)
 
 ### And now we do the same thing for our test data ###
 imr.fit(X_test[["Age"]])
@@ -162,8 +162,7 @@ X_test["Embarked"] = X_test["Embarked"].replace(np.nan, most_freq_embark[0])
 
 X_test = pd.get_dummies(X_test, columns=["Sex"])
 X_test = pd.get_dummies(X_test, columns=["Embarked"])
-
-X_test["Cabin"] = X_test["Cabin"].map(size_mapping)
+X_test = pd.get_dummies(X_test, columns=["Cabin"])
 
 # Create cross validation test set
 # Comment out to give train set more data.
@@ -186,9 +185,9 @@ feature_importance(X_train, y_train, forest)
 # Reveal best threshold of features
 # t = find_best_thresh(X_train_split, y_train_split, X_cv, y_cv, forest)
 # print("Best thresh: ", t)
-# Best threshold was found to be either 0 or 0.05
+# Best threshold was found to be 0.1
 
-selection = SelectFromModel(estimator=forest, threshold=0)
+selection = SelectFromModel(estimator=forest, threshold=0.1)
 selection.fit(X_train, y_train)
 X_train_selected = selection.transform(X_train)
 
