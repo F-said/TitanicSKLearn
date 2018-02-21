@@ -3,7 +3,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 
@@ -142,7 +142,7 @@ X_train = pd.get_dummies(X_train, columns=["Cabin"])
 # Drop Cabin_T
 X_train = X_train.drop(labels=["Cabin_T"], axis=1)
 
-### And now we do the same thing for our test data ###
+# And now we do the same thing for our test data
 imr.fit(X_test[["Age"]])
 X_test["Age"] = imr.transform(X_test[["Age"]])
 X_test["Age"] = X_test["Age"].astype(str).apply(lambda x: x[:4])
@@ -164,10 +164,6 @@ X_test = pd.get_dummies(X_test, columns=["Sex"])
 X_test = pd.get_dummies(X_test, columns=["Embarked"])
 X_test = pd.get_dummies(X_test, columns=["Cabin"])
 
-# Create cross validation test set
-# Comment out to give train set more data.
-# X_train_split, X_cv, y_train_split, y_cv = train_test_split(X_train, y_train, test_size=0.2)
-
 ''' Algorithm '''
 # Find best parameters through this computationally expensive monster that I plan on only using once before commenting
 # out
@@ -187,17 +183,15 @@ feature_importance(X_train, y_train, forest)
 # print("Best thresh: ", t)
 # Best threshold was found to be 0.1
 
-selection = SelectFromModel(estimator=forest, threshold=0.1)
+selection = SelectFromModel(estimator=forest, threshold=0.05)
 selection.fit(X_train, y_train)
 X_train_selected = selection.transform(X_train)
 
 forest.fit(X_train_selected, y_train)
 
 ''' Cross-validation '''
-# X_cv_selected = selection.transform(X_cv)
-# y_cv_predict = forest.predict(X_cv_selected)
-
-# print("Accuracy score: ", accuracy_score(y_true=y_cv, y_pred=y_cv_predict))
+scores = cross_val_score(forest, X_train_selected, y_train, cv=5)
+print("Accuracy: ", scores.mean())
 
 ''' Predict '''
 X_selected_test = selection.transform(X_test)
