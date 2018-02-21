@@ -170,9 +170,8 @@ X_test = pd.get_dummies(X_test, columns=["Cabin"])
 # best_e, best_d = find_best_params(X_train_split, y_train_split, X_cv, y_cv, t)
 # print("Best Estimator: ", best_e)
 # print("Best depth: ", best_d)
-# Best n = 150, best depth = 5
 
-forest = RandomForestClassifier(criterion="entropy", n_estimators=150, n_jobs=2, max_depth=5, oob_score=True,
+forest = RandomForestClassifier(criterion="gini", n_estimators=350, n_jobs=2, max_depth=7, oob_score=True,
                                 max_features="auto")
 
 # Reveal order of feature importance
@@ -183,14 +182,14 @@ feature_importance(X_train, y_train, forest)
 # print("Best thresh: ", t)
 # Best threshold was found to be 0.1
 
-selection = SelectFromModel(estimator=forest, threshold=0.05)
+selection = SelectFromModel(estimator=forest, threshold=0.01)
 selection.fit(X_train, y_train)
 X_train_selected = selection.transform(X_train)
 
 forest.fit(X_train_selected, y_train)
 
 ''' Cross-validation '''
-scores = cross_val_score(forest, X_train_selected, y_train, cv=5)
+scores = cross_val_score(forest, X_train_selected, y_train, cv=5, scoring='f1_macro')
 print("Accuracy: ", scores.mean())
 
 ''' Predict '''
