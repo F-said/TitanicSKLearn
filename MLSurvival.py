@@ -93,6 +93,7 @@ def most_frequent_string(Series):
     max_value = max(features.values())
     return [k for k, v in features.items() if v == max_value]
 
+
 ''' Pre-process '''
 # Load data
 train_data = pd.read_csv("train.csv")
@@ -171,7 +172,7 @@ X_test = pd.get_dummies(X_test, columns=["Cabin"])
 # print("Best Estimator: ", best_e)
 # print("Best depth: ", best_d)
 
-forest = RandomForestClassifier(criterion="gini", n_estimators=350, n_jobs=2, max_depth=7, oob_score=True,
+forest = RandomForestClassifier(criterion="entropy", n_estimators=150, n_jobs=2, max_depth=5, oob_score=True,
                                 max_features="auto")
 
 # Reveal order of feature importance
@@ -182,14 +183,14 @@ feature_importance(X_train, y_train, forest)
 # print("Best thresh: ", t)
 # Best threshold was found to be 0.1
 
-selection = SelectFromModel(estimator=forest, threshold=0.01)
+selection = SelectFromModel(estimator=forest, threshold=0.1)
 selection.fit(X_train, y_train)
 X_train_selected = selection.transform(X_train)
 
 forest.fit(X_train_selected, y_train)
 
 ''' Cross-validation '''
-scores = cross_val_score(forest, X_train_selected, y_train, cv=5, scoring='f1_macro')
+scores = cross_val_score(forest, X_train_selected, y_train, cv=5)
 print("Accuracy: ", scores.mean())
 
 ''' Predict '''
